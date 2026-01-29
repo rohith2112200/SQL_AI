@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - SQL.ai</title>
+    <!-- Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+
+    <canvas id="neuralMesh"></canvas>
+
+    <div class="login-container">
+        <div class="glass-login-card">
+
+            <div class="brand-logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                SQL<span>.ai</span>
+            </div>
+
+            <!-- LOGIN -->
+            <form id="loginForm">
+                <div class="form-header">
+                    <h2>Welcome Back</h2>
+                    <p>Sign in to continue</p>
+                </div>
+
+                <div class="message-box" id="loginMsg"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Username or Email</label>
+                    <input type="text" id="loginUser" class="form-input" placeholder="Enter your username" required
+                        autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="loginPass" class="form-input" placeholder="Enter your password" required>
+                </div>
+
+                <!-- NO CAPTCHA (Removed as requested) -->
+
+                <button type="submit" class="btn-submit" id="magneticBtn" style="margin-top: 1rem;">
+                    Sign In
+                </button>
+
+                <div class="auth-footer">
+                    <a href="#" class="forgot-link" onclick="toggleAuth('forgot'); return false;">Forgot Password?</a>
+                    <a href="#" class="create-link" onclick="toggleAuth('register'); return false;">Create Account</a>
+                </div>
+            </form>
+
+            <!-- REGISTER -->
+            <form id="registerForm" style="display: none;">
+                <div class="form-header">
+                    <h2>Create Account</h2>
+                    <p>Start your data journey</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="regName" class="form-input" placeholder="What should we call you?" required
+                        autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="regUser" class="form-input" placeholder="Choose a username" required
+                        autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="regEmail" class="form-input" placeholder="Enter your email" required
+                        autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="regPass" class="form-input" placeholder="Create a password" required>
+                </div>
+
+                <div class="form-group" style="z-index: 50; position: relative;">
+                    <label class="form-label">Security Question</label>
+
+                    <!-- Custom Select Layout -->
+                    <div class="custom-select-container" id="customSelect">
+                        <div class="custom-select-trigger" tabindex="0">
+                            <span id="selectText">Select a question</span>
+                            <svg class="select-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                        <div class="custom-options">
+                            <div class="custom-option" data-value="pet">What was the name of your first pet?</div>
+                            <div class="custom-option" data-value="school">What elementary school did you attend?
+                            </div>
+                            <div class="custom-option" data-value="city">In what city were you born?</div>
+                        </div>
+                    </div>
+                    <!-- Hidden Input for Form Logic -->
+                    <input type="hidden" id="regQuestion">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Security Answer</label>
+                    <input type="text" id="regAnswer" class="form-input" placeholder="Your Answer" required
+                        autocomplete="off">
+                </div>
+
+                <button type="submit" class="btn-submit">Sign Up</button>
+
+                <div class="auth-footer">
+                    <span style="color:var(--text-muted); font-size:0.9rem">Already have an account?</span>
+                    <a href="#" class="create-link" onclick="toggleAuth('login'); return false;">Sign In</a>
+                </div>
+            </form>
+
+            <!-- FORGOT PASSWORD -->
+            <form id="forgotForm" style="display: none;">
+                <div class="form-header">
+                    <h2>Reset Password</h2>
+                    <p>Secure Account Recovery</p>
+                </div>
+
+                <!-- Step 1 -->
+                <div id="forgotStep1">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="resetUser" class="form-input" placeholder="Enter your username" required
+                            autocomplete="off">
+                    </div>
+                    <button type="button" class="btn-submit" onclick="fetchSecurityQuestion()">Continue</button>
+                </div>
+
+                <!-- Step 2 -->
+                <div id="forgotStep2" style="display: none;">
+                    <div class="form-group">
+                        <div id="securityQuestionDisplay" style="
+                            color: var(--primary); 
+                            font-weight: 700; 
+                            margin-bottom: 1rem; 
+                            text-align: center; 
+                            padding: 12px; 
+                            background: linear-gradient(to right, #ecfdf5, #f0fdf4); 
+                            border-radius: 12px; 
+                            border: 1px solid #d1fae5;
+                            font-size: 0.95rem;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        ">Loading Question...</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Your Answer</label>
+                        <input type="text" id="resetAnswer" class="form-input" placeholder="Answer the question"
+                            required autocomplete="off">
+                    </div>
+
+                    <button type="button" class="btn-submit" onclick="verifySecurityAnswer()">Verify Answer</button>
+                </div>
+
+                <!-- Step 3 -->
+                <div id="forgotStep3" style="display: none;">
+                    <div class="form-group" style="text-align: center; margin-bottom: 1.5rem;">
+                        <span style="
+                            background: #dcfce7; color: #15803d; 
+                            padding: 6px 12px; border-radius: 20px; 
+                            font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        ">
+                            ✓ Answer Verified
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" id="resetPass" class="form-input" placeholder="Set new password"
+                            required>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Reset Password</button>
+                </div>
+
+                <div class="auth-footer">
+                    <a href="#" class="forgot-link" onclick="toggleAuth('login'); return false;">Back to Login</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+
+</html>
