@@ -55,13 +55,21 @@ const PORT = process.env.PORT || 3001; // Default to 3001 to avoid conflict with
 app.use(cors());
 app.use(bodyParser.json());
 
-// Session Configuration
+// Debug Logger (Top Level)
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl || req.url}`);
+    next();
+});
+
+// Health Check
+app.get('/ping', (req, res) => res.send('pong'));
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'super_secret_key_change_me',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false,
+        secure: false, // Set to true if using HTTPS
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
@@ -745,6 +753,12 @@ app.post('/api/export-csv', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="export.csv"');
     res.send(csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(data));
+});
+
+// Global 404 Disconnect
+app.use((req, res) => {
+    console.log(`[${new Date().toISOString()}] 404 NOT FOUND: ${req.url}`);
+    res.status(404).send('Cannot GET ' + req.url + ' (Handled by Express)');
 });
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
