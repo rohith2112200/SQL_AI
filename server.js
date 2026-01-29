@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { createObjectCsvStringifier } = require('csv-writer');
@@ -65,16 +66,28 @@ app.use(session({
     }
 }));
 
+// Debug Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
+// Static Files (Serve FIRST to ensure assets load)
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
 // Root Route Protection
 app.get('/', (req, res) => {
     if (!req.session.userId) {
+        console.log('Redirecting to login...');
         return res.redirect('/login.html');
     }
-    res.sendFile(__dirname + '/public/index.html');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Static Files
-app.use(express.static('public', { index: false }));
+// Fallback for Login
+app.get('/login.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
 
 // Auth Middleware
 function isAuthenticated(req, res, next) {
