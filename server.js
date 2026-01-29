@@ -50,19 +50,26 @@ try { mssql = require('mssql'); } catch (e) { console.log('MSSQL driver not foun
 try { oracledb = require('oracledb'); if (oracledb) oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT; } catch (e) { console.log('Oracle driver not found'); }
 
 const app = express();
-const PORT = process.env.PORT || 3001; // Default to 3001 to avoid conflict with existing app on 3000
+const PORT = process.env.PORT || 3005; // CHANGE TO 3005 TO AVOID CONFLICTS
+
+console.log(`[STARTUP] Initializing Server on Port ${PORT}...`);
+console.log(`[STARTUP] PID: ${process.pid}`);
 
 app.use(cors());
 app.use(bodyParser.json());
 
 // Debug Logger (Top Level)
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl || req.url}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
 });
 
+console.log('[STARTUP] Mounting /ping route...');
 // Health Check
-app.get('/ping', (req, res) => res.send('pong'));
+app.get('/ping', (req, res) => {
+    console.log('PING HIT!');
+    res.send('pong');
+});
 
 app.use(session({
     secret: process.env.SESSION_SECRET || 'super_secret_key_change_me',
