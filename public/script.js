@@ -1,4 +1,9 @@
-// Main Script (Loaded at end of body)
+// Main Script v2.1.5 - SYNCHRONIZED_MOTION_ACTIVE
+console.log('🧪 SQL.ai Motion Engine: v2.1.5 (Active)');
+
+document.addEventListener('click', (e) => {
+    console.log('⚡ TOP LEVEL CLICK:', e.target.className, e.target.id);
+}, true); // Use capture phase
 // =========================================================
 // 1. DOM ELEMENTS
 // =========================================================
@@ -43,6 +48,37 @@ let currentPage = 1;
 const rowsPerPage = 10;
 
 // =========================================================
+// 0. THEME MANAGER (PREMIUM)
+// =========================================================
+const themeToggleBtn = document.getElementById('themeToggle');
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    // Premium Micro-Interaction: Add pulse class
+    themeToggleBtn.classList.add('pulse-animation');
+    setTimeout(() => themeToggleBtn.classList.remove('pulse-animation'), 300);
+});
+
+// Initialize on Load
+initTheme();
+
+// =========================================================
 // 0. AUTHENTICATION CHECK
 // =========================================================
 fetch('/api/auth/me')
@@ -70,56 +106,8 @@ const settingsBtn = document.querySelector('.settings-btn'); // Gear icon
 // Close Modal
 // (Moved modal logic to bottom for cleaner organization)
 
-// LOAD CONNECTIONS
-async function loadConnections() {
-    const list = document.getElementById('connectionList');
-    list.innerHTML = '<div style="text-align:center; padding:20px;">Loading...</div>';
-
-    try {
-        const res = await fetch('/api/connections');
-        const data = await res.json();
-        const resMe = await fetch('/api/auth/me'); // Check active
-        const meData = await resMe.json();
-        const activeId = meData.activeConnection ? meData.activeConnection.id : null;
-
-        list.innerHTML = '';
-
-        if (data.connections.length === 0) {
-            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">No connections saved. Add one above.</div>';
-            return;
-        }
-
-        data.connections.forEach(conn => {
-            const isConnected = conn.id === activeId;
-            const div = document.createElement('div');
-            div.className = `connection-item ${isConnected ? 'active-conn' : ''}`;
-            div.innerHTML = `
-                    <div class="conn-info">
-                        <strong>${conn.name}</strong>
-                        <span>${conn.host}:${conn.port} (${conn.db_user})</span>
-                    </div>
-                    <div class="conn-actions">
-                        ${isConnected
-                    ? `<span style="color:var(--primary); font-weight:bold; font-size:0.8rem; padding:6px; display:flex; align-items:center; gap:4px; cursor:pointer;" onclick="switchConnection(${conn.id}, event)" title="Click to Refresh Schemas"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Connected</span>`
-                    : `<button class="btn-connect" onclick="switchConnection(${conn.id}, event)">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                        Connect
-                       </button>`
-                }
-                        <button class="btn-delete" title="Delete Connection" onclick="deleteConnection(${conn.id})">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
-                    </div>
-                `;
-            list.appendChild(div);
-        });
-    } catch (e) {
-        console.error('Failed to load connections:', e);
-        list.innerHTML = '<div style="color:#ef4444; font-size:0.8rem; padding:10px;">Error loading connections. Check console.</div>';
-    }
-}
-
-// AUTO-FILL PORT based on Type
+// [Flagship loadConnections located in Section 8 below]
+// Legacy code removed to prevent conflict
 const portMap = {
     'mysql': 3306,
     'mariadb': 3306,
@@ -158,7 +146,25 @@ document.getElementById('testConnBtn').addEventListener('click', async (e) => {
     const port = document.getElementById('newConnPort').value;
     const schema = document.getElementById('newConnSchema').value;
 
-    if (!host || !user || !pass) return alert("Please fill standard fields");
+    const requiredFields = [
+        { id: 'newConnHost', val: host },
+        { id: 'newConnUser', val: user },
+        { id: 'newConnPass', val: pass }
+    ];
+
+    let hasError = false;
+    requiredFields.forEach(field => {
+        if (!field.val) {
+            const el = document.getElementById(field.id);
+            if (el) {
+                el.classList.add('input-error');
+                el.addEventListener('input', () => el.classList.remove('input-error'), { once: true });
+            }
+            hasError = true;
+        }
+    });
+
+    if (hasError) return showToast("Please fill standard fields", "error");
 
     // UI Loading
     const originalText = btn.innerHTML;
@@ -187,10 +193,10 @@ document.getElementById('testConnBtn').addEventListener('click', async (e) => {
         }
     } catch (e) {
         showToast('Connection Failed: ' + e.message, 'error');
-        alert('Connection Failed: ' + e.message);
         btn.innerHTML = '⚠️ Failed';
         setTimeout(() => btn.innerHTML = originalText, 3000);
-    } finally {
+    }
+    finally {
         btn.disabled = false;
     }
 });
@@ -206,7 +212,33 @@ document.getElementById('saveConnBtn').addEventListener('click', async (e) => {
     const port = document.getElementById('newConnPort').value;
     const schema = document.getElementById('newConnSchema').value;
 
-    if (!name || !host || !user || !pass) return alert("Please fill standard fields");
+    // Clear previous errors
+    [name, host, user, pass].forEach(id => {
+        const el = document.getElementById(id ? (id === name ? 'newConnName' : (id === host ? 'newConnHost' : (id === user ? 'newConnUser' : 'newConnPass'))) : '');
+        if (el) el.classList.remove('input-error');
+    });
+
+    const requiredFields = [
+        { id: 'newConnName', val: name },
+        { id: 'newConnHost', val: host },
+        { id: 'newConnUser', val: user },
+        { id: 'newConnPass', val: pass }
+    ];
+
+    let hasError = false;
+    requiredFields.forEach(field => {
+        if (!field.val) {
+            const el = document.getElementById(field.id);
+            if (el) {
+                el.classList.add('input-error');
+                // Remove error on input
+                el.addEventListener('input', () => el.classList.remove('input-error'), { once: true });
+            }
+            hasError = true;
+        }
+    });
+
+    if (hasError) return showToast("Please complete all required fields", "error");
 
     try {
         const res = await fetch('/api/connections', {
@@ -222,10 +254,10 @@ document.getElementById('saveConnBtn').addEventListener('click', async (e) => {
         if (res.ok) {
             // Clear form (ALL fields)
             document.getElementById('newConnName').value = '';
-            document.getElementById('newConnHost').value = ''; // Added
+            document.getElementById('newConnHost').value = '';
             document.getElementById('newConnUser').value = '';
             document.getElementById('newConnPass').value = '';
-            document.getElementById('newConnSchema').value = ''; // Added
+            document.getElementById('newConnSchema').value = '';
 
             // Reset to defaults
             document.getElementById('newConnType').value = 'mysql';
@@ -254,123 +286,19 @@ document.getElementById('saveConnBtn').addEventListener('click', async (e) => {
             const savedTab = document.querySelector('.tab-btn[data-tab="saved-connections"]');
             if (savedTab) savedTab.click();
         } else {
-            alert('Failed to save');
+            const errData = await res.json();
+            showToast(errData.error || 'Failed to save connection', 'error');
         }
     } catch (e) { console.error(e); }
 });
 
-// GLOBAL ACTIONS (Expose to window for onclick)
-window.switchConnection = async (id, e) => {
-    if (e) e.stopPropagation();
+// [Flagship switchConnection located in Section 8.3 below]
 
-    // CASE: Force Refresh (ID is null)
-    // CASE: Force Refresh (ID is null)
-    if (id === null) {
-        // Find the button to animate
-        const btn = e?.currentTarget || e?.target?.closest('button');
-        if (btn) {
-            const icon = btn.querySelector('svg');
-            if (icon) icon.classList.add('rotating'); // CSS spin class
-            btn.disabled = true;
-        }
-
-        // No Toast, just silent refresh with animation
-        await fetchDatabases();
-
-        // Reset Button State
-        if (btn) {
-            const icon = btn.querySelector('svg');
-            if (icon) icon.classList.remove('rotating');
-            btn.disabled = false;
-        }
-        return;
-    }
-
-    try {
-        const activeConnElement = document.querySelector('.active-conn');
-        const isRefresh = activeConnElement && activeConnElement.querySelector('.conn-actions span')?.contains(e?.target);
-
-        if (isRefresh) {
-            showToast('Refreshing Database List...', 'success');
-        } else {
-            showToast('Connecting...', 'success');
-        }
-
-        const res = await fetch('/api/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ connectionId: id })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.error || 'Connection refused by server');
-        }
-
-        showToast(`Connected to ${data.activeConnection}`, 'success');
-        loadConnections(); // Refresh UI
-
-        // REFRESH DATABASES & AWAIT IT
-        await fetchDatabases();
-
-        // Reset sidebar search if any
-        const searchInput = document.getElementById('dbSearchInput');
-        if (searchInput) {
-            searchInput.value = '';
-            // Trigger clear btn hide if needed (via internal logic)
-            const clearBtn = document.getElementById('dbSearchClear');
-            if (clearBtn) clearBtn.style.display = 'none';
-        }
-
-    } catch (e) {
-        console.error(e);
-        alert('Connection Failed: ' + e.message);
-        // Also show toast
-        showToast('Connection Failed: ' + e.message, 'error');
-    }
-};
-
-window.deleteConnection = async (id) => {
-    if (!confirm('Delete this connection?')) return;
-    await fetch(`/api/connections/${id}`, { method: 'DELETE' });
-    loadConnections();
-};
+// [Flagship deleteConnection located in Section 8.5 above]
 const logoutAction = document.getElementById('logoutAction');
 
 // 6. GLOBAL HELPERS FOR HTML ONCLICK
-// (Avoids event listener race conditions)
-
-window.toggleSettingsDropdown = (e) => {
-    if (e) e.stopPropagation();
-
-    // Close other dropdowns (Database Dropdown)
-    const dbDd = document.querySelector('.custom-dropdown');
-    if (dbDd) dbDd.classList.remove('active');
-
-    const dd = document.querySelector('.settings-dropdown');
-    if (dd) dd.classList.toggle('active');
-};
-
-window.openSettingsModal = (e) => {
-    if (e) e.stopPropagation();
-    const dd = document.querySelector('.settings-dropdown');
-    const modal = document.getElementById('settingsModal');
-
-    if (dd) dd.classList.remove('active'); // Close menu
-    if (modal) modal.style.display = 'flex'; // Open modal
-
-    // Call loadConnections if available (it's defined in this scope)
-    // We need to ensure loadConnections is hoisted or available. 
-    // Since it's 'async function loadConnections', it is hoisted within this scope.
-    loadConnections();
-};
-
-window.closeSettingsModal = (e) => {
-    if (e) e.stopPropagation();
-    const modal = document.getElementById('settingsModal');
-    if (modal) modal.style.display = 'none';
-};
+// Legacy Modal Handlers Removed - Unified in Section 10/11 below
 
 // Close dropdowns on global click
 document.addEventListener('click', (e) => {
@@ -702,8 +630,8 @@ if (runSqlBtn) {
         const database = dbSelector.value;
 
         // UI Feedback
-        const originalText = runSqlBtn.innerHTML;
-        runSqlBtn.innerHTML = 'Running...';
+        const originalContent = runSqlBtn.innerHTML;
+        runSqlBtn.innerHTML = `<span class="spinner" style="width:18px; height:18px; border-width:2.5px;"></span>`;
         runSqlBtn.disabled = true;
 
         executeAndRender(manualSql, database).finally(() => {
@@ -1246,28 +1174,365 @@ function downloadBlob(blob, filename) {
 }
 
 // =========================================================
-// 6. TABS LOGIC
+// 6. TABS LOGIC (SIDEBAR SYNC)
 // =========================================================
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        // 1. Remove active from all buttons
+// Unified interactions handled in section 11 (Global Motion Engine)
+
+// =========================================================
+// 8. CONNECTION ACTIONS (Elite Motion Engine)
+// =========================================================
+// 8.1 TOAST ENGINE (Singleton Pattern)
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    // Singleton: Remove existing toasts for a cleaner, unified feel
+    const existingToasts = container.querySelectorAll('.toast');
+    existingToasts.forEach(t => {
+        t.classList.remove('show');
+        setTimeout(() => t.remove(), 400);
+    });
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-icon">
+            ${type === 'success' ? '✅' : '⚠️'}
+        </div>
+        <div class="toast-message" style="font-weight: 700; font-size: 0.9rem;">${message}</div>
+    `;
+
+    container.appendChild(toast);
+
+    // Staggered Entry
+    requestAnimationFrame(() => {
+        setTimeout(() => toast.classList.add('show'), 50);
+    });
+
+    // Auto-dismiss
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 400);
+        }
+    }, 2500);
+}
+
+// 8.2 LOAD CONNECTIONS (Premium Tier)
+async function loadConnections() {
+    const list = document.getElementById('connectionList');
+    const ddContent = document.querySelector('#dbDropdown .dropdown-content');
+    if (!list) return;
+
+    try {
+        const res = await fetch('/api/connections');
+        const data = await res.json();
+
+        // Use activeConnection from metadata if available, otherwise fallback
+        const resMe = await fetch('/api/auth/me');
+        const meData = await resMe.json();
+        const activeId = meData.activeConnection ? meData.activeConnection.id : null;
+
+        const connections = data.connections || [];
+
+        // 1. Update Settings Modal List
+        list.innerHTML = connections.map(c => {
+            const isConnected = c.id === activeId;
+            return `
+                <div class="connection-item ${isConnected ? 'active-conn' : ''}" data-id="${c.id}">
+                    <div class="conn-info">
+                        <strong>${c.name}</strong>
+                        <div class="conn-meta">
+                            <span class="type-tag" style="text-transform: uppercase; font-size: 0.7rem; font-weight: 800; color: var(--primary);">${c.db_type}</span>
+                            <span>${c.host}:${c.port}</span>
+                        </div>
+                    </div>
+                    <div class="conn-actions">
+                        ${!isConnected
+                    ? `<button class="premium-button secondary" onclick="switchConnection(${c.id}, event)" style="height: 36px; padding: 0 20px; font-size: 0.85rem;">Connect</button>`
+                    : `<button class="premium-button connected" disabled>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Connected
+                               </button>`
+                }
+                        <button class="btn-delete" title="Delete Connection" onclick="deleteConnection(${c.id})">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // 2. Update Top Nav Dropdown
+        if (ddContent) {
+            ddContent.innerHTML = connections.map(c => `
+                <div class="dropdown-item ${c.id === activeId ? 'selected' : ''}" 
+                     onclick="switchConnection(${c.id}, event)">
+                    ${c.name}
+                </div>
+            `).join('');
+
+            // Update Global Label
+            const active = connections.find(c => c.id === activeId);
+            if (active && document.getElementById('selectedDbLabel')) {
+                document.getElementById('selectedDbLabel').textContent = active.name;
+            }
+        }
+    } catch (e) {
+        console.error('Core Load Failure:', e);
+    }
+}
+
+// 8.3 SWITCH CONNECTION (Transaction Engine)
+async function switchConnection(id, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    // 0. CONTEXT DETECTION
+    const btn = event?.target?.closest('button');
+    const card = btn?.closest('.connection-item');
+    const originalContent = btn?.innerHTML;
+    const originalWidth = btn?.offsetWidth;
+    const isPremiumCard = btn && card; // Triggered from Settings Modal
+
+    // 1. GLOBAL INTERACTION LOCK
+    const allButtons = document.querySelectorAll('.btn-connect, .premium-button, .btn-delete');
+    allButtons.forEach(b => b.disabled = true);
+
+    // 2. UI STATE UPDATES
+    if (isPremiumCard) {
+        // Morph Button Animation (Premium Modal)
+        btn.style.width = `${originalWidth}px`;
+        btn.innerHTML = '<span class="spinner"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg></span>';
+        card.classList.add('switching');
+    } else {
+        // Simple Feedback (Top Nav Dropdown)
+        // CHECK: Is this a Refresh Action?
+        if (id === null) {
+            showToast("Refreshing Schemas...", "success");
+        } else {
+            showToast("Switching Database...", "success");
+        }
+    }
+
+    try {
+        const startTime = Date.now();
+
+        // CASE: REFRESH MODE (id === null)
+        if (id === null) {
+            // Just fetch databases/schemas again
+            await fetchDatabases();
+            // Artificial delay for specific feel
+            const elapsed = Date.now() - startTime;
+            if (elapsed < 800) await new Promise(r => setTimeout(r, 800 - elapsed));
+
+            showToast("Schemas Refreshed", "success");
+            return; // EXIT EARLY - Do not hit /api/connect
+        }
+
+        // FIXED: Endpoint is /api/connect (Not /connections/switch)
+        const res = await fetch('/api/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connectionId: id }) // FIXED: Payload key matches server.js
+        });
+
+        // 3. MINIMUM MOTION DURATION (600ms for psychological weight)
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 600) await new Promise(r => setTimeout(r, 600 - elapsed));
+
+        if (res.ok) {
+            // 4. SUCCESS SEQUENCE
+            if (isPremiumCard) {
+                card.classList.remove('switching');
+                card.classList.add('success-pulse'); // Emerald Glow
+                setTimeout(() => card.classList.remove('success-pulse'), 1200);
+            }
+
+            showToast("Connection established successfully");
+            await loadConnections(); // Refresh UI with new Connected badges
+
+        } else {
+            throw new Error("Switch failed");
+        }
+    } catch (e) {
+        showToast("Connection Failed", "error");
+        // Revert State
+        if (isPremiumCard) {
+            btn.innerHTML = originalContent;
+            card.classList.remove('switching');
+        }
+        console.error(e);
+    } finally {
+        // 5. RELEASE LOCK
+        allButtons.forEach(b => b.disabled = false);
+
+        if (isPremiumCard) {
+            btn.style.width = '';
+            btn.disabled = false;
+        }
+    }
+}
+
+// =========================================================
+// 9. TOP NAV DROPDOWN LOGIC (Restored)
+// =========================================================
+window.toggleSettingsDropdown = function (e) {
+    console.log('🚀 toggleSettingsDropdown (Flagship) triggered');
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const container = document.querySelector('.settings-dropdown');
+    const menu = document.querySelector('.settings-menu');
+    const btn = document.querySelector('.settings-btn');
+
+    if (!container || !menu) {
+        console.error('Settings components not found');
+        return;
+    }
+
+    // Toggle parent state (This is what the CSS listens to)
+    const isShowing = container.classList.contains('active');
+    console.log('Syncing dropdown state. Current:', isShowing);
+
+    if (isShowing) {
+        container.classList.remove('active');
+        menu.classList.remove('show'); // Safety backup
+        if (btn) btn.classList.remove('active');
+    } else {
+        container.classList.add('active');
+        menu.classList.add('show'); // Safety backup
+        if (btn) btn.classList.add('active');
+    }
+}
+
+// Global click to close settings dropdown
+window.addEventListener('click', (e) => {
+    if (!e.target.closest('.settings-dropdown')) {
+        document.querySelectorAll('.settings-menu.show').forEach(el => {
+            el.classList.remove('show');
+        });
+        const btn = document.querySelector('.settings-btn');
+        if (btn) btn.classList.remove('active');
+    }
+});
+
+
+// =========================================================
+// 10. MODAL LIFECYCLE (Cinematic Transitions)
+// =========================================================
+window.openSettingsModal = function (e) {
+    console.log('🚀 openSettingsModal (Flagship) triggered');
+    if (e) e.preventDefault();
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        console.log('Applying .active class to modal');
+        modal.classList.add('active');
+        if (typeof loadConnections === 'function') loadConnections();
+    } else {
+        console.error('settingsModal NOT FOUND in DOM');
+    }
+}
+
+function closeSettingsModal(e) {
+    if (e) e.preventDefault();
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// =========================================================
+// 11. TAB SWITCHING (Cinematic Crossfade)
+// =========================================================
+// This runs globally to ensure tab buttons work anywhere they are inserted
+document.addEventListener('click', (e) => {
+    console.log('Global click detected on:', e.target);
+    const btn = e.target.closest('.tab-btn');
+    if (btn) {
+        const target = btn.dataset.tab;
+        const currentActive = document.querySelector('.tab-content.active');
+        const nextActive = document.getElementById(target);
+
+        if (!nextActive || currentActive === nextActive) return;
+
+        // Update nav
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        // 2. Add active to clicked
         btn.classList.add('active');
 
-        // 3. Hide all tab content
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        // Crossfade Sequence
+        if (currentActive) {
+            currentActive.style.opacity = '0';
+            currentActive.style.transform = 'translateY(10px)';
 
-        // 4. Show target tab content
-        const tabId = btn.dataset.tab;
-        const target = document.getElementById(`tab-${tabId}`);
-        if (target) target.classList.add('active');
+            setTimeout(() => {
+                currentActive.classList.remove('active');
+                nextActive.classList.add('active');
 
-        // 5. Optional: Refresh list if viewing connections
-        if (tabId === 'saved-connections') {
-            loadConnections();
+                // Trigger reflow & animate in
+                void nextActive.offsetWidth;
+                nextActive.style.opacity = '1';
+                nextActive.style.transform = 'translateY(0)';
+            }, 250);
+        } else {
+            nextActive.classList.add('active');
+            nextActive.style.opacity = '1';
+            nextActive.style.transform = 'translateY(0)';
         }
-    });
+    }
+
+    // Custom Dropdown Toggle for Modal
+    const dropdown = e.target.closest('.modal-select');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+        dropdown.classList.toggle('active');
+    } else {
+        document.querySelectorAll('.modal-select').forEach(el => {
+            el.classList.remove('show', 'active');
+        });
+    }
+
+    // Dropdown Item Selection
+    if (e.target.classList.contains('dropdown-item')) {
+        const value = e.target.dataset.value;
+        const parent = e.target.closest('.modal-select');
+        const selectedText = parent.querySelector('.selected-value');
+        const hiddenInput = parent.querySelector('input[type="hidden"]');
+
+        if (selectedText) selectedText.textContent = e.target.textContent;
+        if (hiddenInput) hiddenInput.value = value;
+
+        parent.querySelectorAll('.dropdown-item').forEach(item => item.classList.remove('selected'));
+        e.target.classList.add('selected');
+
+        // Auto-fill port if it's the DB Type dropdown
+        if (hiddenInput && hiddenInput.id === 'newConnType') {
+            const portInput = document.getElementById('newConnPort');
+            if (portInput) {
+                const portMap = { 'mysql': '3306', 'postgresql': '5432', 'mongodb': '27017', 'sqlite': '' };
+                portInput.value = portMap[value] || '';
+            }
+        }
+    }
 });
+
+async function deleteConnection(id) {
+    if (!confirm("Are you sure you want to delete this connection?")) return;
+
+    try {
+        const res = await fetch(`/api/connections/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast("Connection deleted successfully");
+            loadConnections();
+        } else {
+            showToast("Failed to delete connection", "error");
+        }
+    } catch (e) {
+        showToast("Error deleting connection", "error");
+    }
+}
 
 
